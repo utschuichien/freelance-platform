@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 5%;         /* #0C0C0C Carbon Dark */
+    --foreground: 210 40% 98%;     /* #F8FAFC */
+
+    --card: 0 0% 9%;               /* #161616 Carbon Card */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 159 100% 48%;       /* #12D18E Electric Mint Cyber */
+    --primary-foreground: 222 47% 7%;
+
+    --secondary: 0 0% 12%;         /* #1E1E1E */
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 159 100% 48%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 346 84% 61%;    /* #F43F5E Rose */
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 28% 22%;          /* #2A364F */
+    --input: 217 28% 22%;
+    --ring: 159 100% 48%;
+
+    --radius: 0.75rem;
+  }
+}
+
+body {
+  background-color: #272727;
+  color: #f8fafc;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Custom Utility Classes for Dark SaaS Mint Cyber */
+
+.glass-card {
+  background: rgba(22, 22, 22, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 45, 45, 0.8);
+}
+
+.glass-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.glass-card-hover:hover {
+  background: rgba(30, 30, 30, 0.85);
+  border-color: rgba(80, 80, 80, 0.4);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.text-gradient-mint {
+  background: linear-gradient(135deg, #ffffff 30%, #12D18E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0c0c;
+}
+::-webkit-scrollbar-thumb {
+  background: #222222;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
