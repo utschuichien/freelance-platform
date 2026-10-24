@@ -1,0 +1,128 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client/contract"
+}
+
+model Contract {
+  id           String         @id @default(uuid()) @db.Char(36)
+  projectId    String         @map("project_id") @db.Char(36)
+  proposalId   String         @map("proposal_id") @db.Char(36)
+  clientId     String         @map("client_id") @db.Char(36)
+  freelancerId String         @map("freelancer_id") @db.Char(36)
+  totalAmount  Decimal        @map("total_amount") @db.Decimal(12, 2)
+  status       ContractStatus @default(DRAFT)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  milestones   Milestone[]
+  reviews      Review[]
+  disputes     Dispute[]
+
+  @@map("contracts")
+  @@index([clientId], name: "idx_contracts_client")
+  @@index([freelancerId], name: "idx_contracts_freelancer")
+}
+
+model Milestone {
+  id          String          @id @default(uuid()) @db.Char(36)
+  contractId  String          @map("contract_id") @db.Char(36)
+  title       String          @db.VarChar(255)
+  description String?         @db.Text
+  amount      Decimal         @db.Decimal(12, 2)
+  deadline    DateTime?
+  status      MilestoneStatus @default(CREATED)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  contract    Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@map("milestones")
+  @@index([contractId], name: "idx_milestones_contract")
+}
+
+model Submission {
+  id             String    @id @default(uuid()) @db.Char(36)
+  milestoneId    String    @map("milestone_id") @db.Char(36)
+  notes          String?   @db.Text
+  attachmentUrls Json?     @map("attachment_urls")
+  feedback       String?   @db.Text
+  submittedAt    DateTime  @default(now()) @map("submitted_at")
+  milestone      Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+  @@index([milestoneId], name: "idx_subs_milestone")
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  DISPUTED
+  TERMINATED
+}
+
+enum MilestoneStatus {
+  CREATED
+  FUNDED
+  SUBMITTED
+  REVISION_REQUESTED
+  APPROVED
+  PAID
+}
+
+model Review {
+  id           String   @id @default(uuid()) @db.Char(36)
+  contractId   String   @map("contract_id") @db.Char(36)
+  reviewerId   String   @map("reviewer_id") @db.Char(36)
+  revieweeId   String   @map("reviewee_id") @db.Char(36)
+  reviewerRole String   @map("reviewer_role") @db.VarChar(20)
+  rating       Int      @db.TinyInt
+  comment      String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, reviewerId], name: "uq_contract_reviewer")
+  @@map("reviews")
+  @@index([contractId], name: "idx_reviews_contract")
+  @@index([revieweeId], name: "idx_reviews_reviewee")
+}
+
+model Dispute {
+  id            String             @id @default(uuid()) @db.Char(36)
+  contractId    String             @map("contract_id") @db.Char(36)
+  milestoneId   String?            @map("milestone_id") @db.Char(36)
+  initiatorId   String             @map("initiator_id") @db.Char(36)
+  initiatorRole String             @map("initiator_role") @db.VarChar(20)
+  reason        String             @db.Text
+  evidenceUrls  Json?              @map("evidence_urls")
+  status        DisputeStatus      @default(OPEN)
+  resolution    DisputeResolution?
+  adminNote     String?            @map("admin_note") @db.Text
+  resolvedBy    String?            @map("resolved_by") @db.Char(36)
+  resolvedAt    DateTime?          @map("resolved_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  contract      Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("disputes")
+  @@index([contractId], name: "idx_disputes_contract")
+  @@index([status], name: "idx_disputes_status")
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CANCELLED
+}
+
+enum DisputeResolution {
+  REFUND_CLIENT
+  RELEASE_FREELANCER
+  SPLIT
+}
+

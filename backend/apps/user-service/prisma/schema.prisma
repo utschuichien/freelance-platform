@@ -1,0 +1,34 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client/user"
+}
+
+model UserProfile {
+  id            String   @id @default(uuid()) @db.Char(36)
+  userId        String   @unique @map("user_id") @db.Char(36)
+  fullName      String   @map("full_name") @db.VarChar(100)
+  avatarUrl     String?  @map("avatar_url") @db.VarChar(500)
+  bio           String?  @db.Text
+  location      String?  @db.VarChar(255)
+  hourlyRate    Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  skills        Json?
+  phoneNumber   String?  @map("phone_number") @db.VarChar(20)
+  kycStatus     KycStatus @default(NONE) @map("kyc_status")
+  kycDocumentUrl String?  @map("kyc_document_url") @db.VarChar(500)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("user_profiles")
+  @@index([userId], name: "idx_user_profiles_user_id")
+}
+
+enum KycStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}

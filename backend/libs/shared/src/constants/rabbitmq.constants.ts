@@ -1,0 +1,32 @@
+export const RABBITMQ_CONFIG = {
+  URI: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+  EXCHANGES: {
+    TOPIC_EXCHANGE: 'freelance.topic.exchange',
+    DEAD_LETTER_EXCHANGE: 'freelance.dlx.exchange',
+    RETRY_EXCHANGE: 'freelance.retry.exchange',
+  },
+  QUEUES: {
+    NOTIFICATION_QUEUE: 'notification_queue',
+    API_GATEWAY_NOTIFICATION_QUEUE: 'api_gateway_notification_queue',
+    OTP_EMAIL_QUEUE: 'notification_otp_email_queue',
+    RETRY_QUEUE: 'notification_retry_queue',
+    DEAD_LETTER_QUEUE: 'notification_dlx_queue',
+  },
+  ROUTING_KEYS: {
+    NOTIFICATION_ALL: 'notification.#',
+    MILESTONE_SUBMITTED: 'notification.milestone.submitted',
+    MILESTONE_APPROVED: 'notification.milestone.approved',
+    MILESTONE_REVESION: 'notification.milestone.revesion',
+    CONTRACT_COMPLETED: 'notification.contract.completed',
+    CONTRACT_TERMINATED: 'notification.contract.terminated',
+    REVIEW_SUBMITTED: 'notification.review.submitted',
+    PROPOSAL_SUBMITTED: 'notification.proposal.submitted',
+    PAYMENT_DEPOSIT: 'notification.payment.deposit',
+    ESCROW_RELEASED: 'notification.payment.escrow_released',
+    SEND_OTP_EMAIL: 'notification.email.send_otp',
+    DEAD_LETTER: 'dead_letter.#',
+    DEAD_LETTER_OTP: 'dead_letter.send_otp_email',
+    DEAD_LETTER_NOTIFICATION: 'dead_letter.notification',
+    RETRY: 'notification.retry.#',
+  },
+};

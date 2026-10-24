@@ -1,0 +1,63 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client/auth"
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Char(36)
+  email         String         @unique @db.VarChar(255)
+  passwordHash  String         @map("password_hash") @db.VarChar(255)
+  role          Role           @default(FREELANCER)
+  fullName      String         @map("full_name") @db.VarChar(100)
+  phoneNumber   String?        @map("phone_number") @db.VarChar(20)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
+  otps          Otp[]
+
+  @@map("users")
+  @@index([email], name: "idx_users_email")
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Char(36)
+  userId      String   @map("user_id") @db.Char(36)
+  tokenHash   String   @map("token_hash") @db.VarChar(255)
+  expiresAt   DateTime @map("expires_at")
+  isRevoked   Boolean  @default(false) @map("is_revoked")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId], name: "idx_refresh_tokens_user")
+}
+
+enum Role {
+  CLIENT
+  FREELANCER
+  ADMIN
+}
+
+model Otp {
+  id        String   @id @default(uuid()) @db.Char(36)
+  email     String   @db.VarChar(255)
+  code      String   @db.VarChar(10)
+  type      OtpType  @default(PASSWORD_RESET)
+  expiresAt DateTime @map("expires_at")
+  isUsed    Boolean  @default(false) @map("is_used")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
+
+  @@map("otps")
+  @@index([email, code])
+}
+
+enum OtpType {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}

@@ -1,0 +1,67 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client/chat"
+}
+
+model Conversation {
+  id            String    @id @default(uuid()) @db.Char(36)
+  type          ConversationType @default(DIRECT)
+  projectId     String?   @map("project_id") @db.Char(36)
+  lastMessage   String?   @map("last_message") @db.Text
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  messages      Message[]
+  participants  ConversationParticipant[]
+
+  @@map("conversations")
+  @@index([projectId], name: "idx_conv_project")
+}
+
+model ConversationParticipant {
+  id                String       @id @default(uuid()) @db.Char(36)
+  conversationId    String       @map("conversation_id") @db.Char(36)
+  userId            String       @map("user_id") @db.Char(36)
+  lastReadMessageId String?      @map("last_read_message_id") @db.Char(36)
+  joinedAt          DateTime     @default(now()) @map("joined_at")
+
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId], name: "uq_conv_user")
+  @@map("conversation_participants")
+  @@index([userId], name: "idx_cp_user")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Char(36)
+  conversationId String       @map("conversation_id") @db.Char(36)
+  senderId       String       @map("sender_id") @db.Char(36)
+  type           MessageType  @default(TEXT)
+  content        String       @db.Text
+  metadata       Json?
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+  @@index([conversationId], name: "idx_msg_conversation")
+  @@index([senderId], name: "idx_msg_sender")
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  PROJECT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM_EVENT
+}

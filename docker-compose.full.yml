@@ -1,0 +1,278 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 💾 1. INFRASTRUCTURE SERVICES
+  # ==========================================
+  mariadb:
+    image: mariadb:10.11
+    container_name: freelance_mariadb
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qwertyuiop0}
+      MYSQL_USER: ${MYSQL_USER:-freelance_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-freelance_password}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - freelance_net
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD:-qwertyuiop0} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: freelance_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - freelance_net
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: freelance_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - freelance_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # ⚙️ 2. BACKEND MICROSERVICES
+  # ==========================================
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: auth-service
+    container_name: freelance_auth_service
+    restart: unless-stopped
+    environment:
+      AUTH_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/auth_db"
+      JWT_SECRET: ${JWT_SECRET:-VyZJhH8HCmF+hUTbyqsmHVtjF+34GaCrPylogodZD+k=}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: user-service
+    container_name: freelance_user_service
+    restart: unless-stopped
+    environment:
+      USER_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/user_db"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  project-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: project-service
+    container_name: freelance_project_service
+    restart: unless-stopped
+    environment:
+      PROJECT_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/project_db"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  contract-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: contract-service
+    container_name: freelance_contract_service
+    restart: unless-stopped
+    environment:
+      CONTRACT_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/contract_db"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672"
+      PROJECT_SERVICE_HOST: "project-service"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      project-service:
+        condition: service_started
+    networks:
+      - freelance_net
+
+  payment-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: payment-service
+    container_name: freelance_payment_service
+    restart: unless-stopped
+    environment:
+      PAYMENT_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/payment_db"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: chat-service
+    container_name: freelance_chat_service
+    restart: unless-stopped
+    environment:
+      CHAT_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/chat_db"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  notification-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: notification-service
+    container_name: freelance_notification_service
+    restart: unless-stopped
+    environment:
+      NOTIFICATION_DATABASE_URL: "mysql://${MYSQL_USER:-freelance_user}:${MYSQL_PASSWORD:-freelance_password}@mariadb:3306/notification_db"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672"
+      SMTP_HOST: ${SMTP_HOST:-smtp.ethereal.email}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-maddison53@ethereal.email}
+      SMTP_PASS: ${SMTP_PASS:-jn7jnAPss4f63QBp6D}
+      MAIL_FROM: ${MAIL_FROM:-"FreelanceX Platform <noreply@freelancex.com>"}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - freelance_net
+
+  # ==========================================
+  # 🛡️ 3. API GATEWAY
+  # ==========================================
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: api-gateway
+    container_name: freelance_api_gateway
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      PORT: ${PORT:-3000}
+      JWT_SECRET: ${JWT_SECRET:-VyZJhH8HCmF+hUTbyqsmHVtjF+34GaCrPylogodZD+k=}
+      REDIS_URL: "redis://redis:${REDIS_PORT:-6379}"
+      RABBITMQ_URL: "amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      AUTH_SERVICE_HOST: "auth-service"
+      USER_SERVICE_HOST: "user-service"
+      PROJECT_SERVICE_HOST: "project-service"
+      CONTRACT_SERVICE_HOST: "contract-service"
+      PAYMENT_SERVICE_HOST: "payment-service"
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mariadb:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      project-service:
+        condition: service_started
+      contract-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - freelance_net
+
+  # ==========================================
+  # 🖥️ 4. FRONTEND (NEXT.JS 14)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: freelance_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3002}:3002"
+    environment:
+      PORT: ${FRONTEND_PORT:-3002}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3000}
+    depends_on:
+      - api-gateway
+    networks:
+      - freelance_net
+
+volumes:
+  mariadb_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  freelance_net:
+    driver: bridge

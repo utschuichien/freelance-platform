@@ -1,0 +1,101 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client/project"
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(100)
+  projects Project[]
+
+  @@map("categories")
+}
+
+model Skill {
+  id       Int            @id @default(autoincrement())
+  name     String         @unique @db.VarChar(50)
+  projects ProjectSkill[]
+
+  @@map("skills")
+}
+
+model Project {
+  id          String         @id @default(uuid()) @db.Char(36)
+  clientId    String         @map("client_id") @db.Char(36)
+  title       String         @db.VarChar(255)
+  description String         @db.Text
+  budget      Decimal        @db.Decimal(12, 2)
+  deadline    DateTime?
+  categoryId  Int?           @map("category_id")
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  type        String?        @db.VarChar(50)
+  status      ProjectStatus  @default(OPEN)
+  version     Int            @default(1)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  skills      ProjectSkill[]
+  milestones  Milestone[]
+  proposals   Proposal[]
+
+  @@map("projects")
+  @@index([clientId], name: "idx_projects_client")
+  @@index([status], name: "idx_projects_status")
+  @@index([categoryId], name: "idx_projects_category")
+}
+
+model ProjectSkill {
+  projectId String  @map("project_id") @db.Char(36)
+  skillId   Int     @map("skill_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, skillId])
+  @@map("project_skills")
+}
+
+model Milestone {
+  id          String   @id @default(uuid()) @db.Char(36)
+  projectId   String   @map("project_id") @db.Char(36)
+  title       String   @db.VarChar(255)
+  amount      Decimal  @db.Decimal(12, 2)
+  order       Int      @default(1)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("milestones")
+  @@index([projectId], name: "idx_milestones_project")
+}
+
+model Proposal {
+  id            String         @id @default(uuid()) @db.Char(36)
+  projectId     String         @map("project_id") @db.Char(36)
+  freelancerId  String         @map("freelancer_id") @db.Char(36)
+  bidAmount     Decimal        @map("bid_amount") @db.Decimal(12, 2)
+  estimatedDays Int            @map("estimated_days")
+  coverLetter   String?        @map("cover_letter") @db.Text
+  status        ProposalStatus @default(PENDING)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, freelancerId], name: "uq_project_freelancer")
+  @@map("proposals")
+  @@index([projectId], name: "idx_proposals_project")
+}
+
+enum ProjectStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
