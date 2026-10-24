@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, Sun, Bell, PlusCircle, Loader2, Menu, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useLogoutMutation } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/utils";
 import { useUIStore } from "@/store/useUIStore";
@@ -16,8 +17,10 @@ interface TopHeaderProps {
 }
 
 export default function TopHeader({ setShowCreateProjectModal, isLoggedIn = false, user }: TopHeaderProps) {
+  const router = useRouter();
   const logoutMutation = useLogoutMutation();
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { setProfileModalOpen, setMobileMenuOpen } = useUIStore();
   const { data: wallet } = useGetWallet(isLoggedIn);
 
@@ -26,6 +29,12 @@ export default function TopHeader({ setShowCreateProjectModal, isLoggedIn = fals
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/jobs?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -48,7 +57,10 @@ export default function TopHeader({ setShowCreateProjectModal, isLoggedIn = fals
         <Search className="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Tìm việc làm, dự án..."
           className="w-full pl-10 pr-4 py-2 rounded-md bg-[#161616] border border-[#222222] text-xs text-white placeholder-[#64748B] focus:outline-none focus:border-[#12D18E] transition-all"
         />
       </div>
